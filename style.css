@@ -189,9 +189,7 @@ main {
   line-height: 1.08;
   letter-spacing: -0.025em;
   text-wrap: balance;
-  text-shadow:
-    0 2px 3px rgba(0, 0, 0, 0.24),
-    0 10px 34px rgba(0, 0, 0, 0.24);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.5), 0 10px 34px rgb(0, 0, 0);
 }
 
 #quote-source {
