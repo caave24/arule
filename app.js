@@ -24,6 +24,17 @@ function setRandomColor(colors) {
   document.documentElement.style.setProperty("--text-color", randomItem(colors));
 }
 
+function setRandomFont(fonts = []) {
+  if (!fonts.length) return;
+
+  const font = randomItem(fonts);
+
+  document.documentElement.style.setProperty(
+    "--quote-font",
+    `"${font}", Georgia, "Times New Roman", serif`
+  );
+}
+
 function setTitle(config) {
   document.title = config.pageTitle || "A-RULE";
 }
@@ -156,11 +167,14 @@ async function init() {
       fetchJSON("./configs/time.json")
     ]);
 
-    setGoogleFonts(textConfig.googleFonts);
-    setTitle(textConfig);
-    setClockColor(timeConfig);
-    setRandomColor(textConfig.colors || ["#ffffff"]);
-    applyText(randomItem(textConfig.items || [{ text: "A-RULE" }]));
+setGoogleFonts(textConfig.googleFonts);
+
+setRandomFont(textConfig.googleFonts);
+
+setTitle(textConfig);
+setClockColor(timeConfig);
+setRandomColor(textConfig.colors || ["#ffffff"]);
+applyText(randomItem(textConfig.items || [{ text: "A-RULE" }]));
 
     setupClock(timeConfig);
     setupClockControls();
