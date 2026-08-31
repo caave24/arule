@@ -1,0 +1,224 @@
+:root {
+  --text-color: #ffffff;
+  --clock-color: #b88cff;
+  --clock-size: 32px;
+  --panel-idle: 0.10;
+  --panel-hover: 0.46;
+  --transition-ms: 1800ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  color: var(--text-color);
+  background: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+#background-root,
+.bg-layer {
+  position: fixed;
+  inset: 0;
+}
+
+#background-root {
+  z-index: -2;
+  overflow: hidden;
+  background: #111;
+}
+
+.bg-layer {
+  z-index: -1;
+  opacity: 1;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: scale(1.015);
+  transition:
+    opacity var(--transition-ms) ease-in-out,
+    transform 8s ease-out;
+}
+
+.bg-next {
+  opacity: 0;
+  z-index: 0;
+}
+
+.bg-next.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.bg-base {
+  z-index: -1;
+}
+
+#background-root::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.18),
+    rgba(0, 0, 0, 0.03) 38%,
+    rgba(0, 0, 0, 0.24)
+  );
+}
+
+main {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#clock-panel {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(10, 10, 14, var(--panel-idle));
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  transition:
+    background 220ms ease,
+    backdrop-filter 220ms ease,
+    transform 220ms ease;
+}
+
+#clock-panel:hover {
+  background: rgba(10, 10, 14, var(--panel-hover));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transform: translateY(1px);
+}
+
+#time {
+  color: var(--clock-color);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: var(--clock-size);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.34);
+}
+
+#date {
+  color: color-mix(in srgb, var(--clock-color) 75%, white);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(12px, calc(var(--clock-size) * 0.43), 23px);
+  font-weight: 500;
+  line-height: 1.25;
+  opacity: 0.9;
+}
+
+.font-size-controls {
+  display: flex;
+  gap: 7px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    max-height 220ms ease,
+    opacity 180ms ease,
+    margin 220ms ease;
+}
+
+#clock-panel:hover .font-size-controls,
+#clock-panel:focus-within .font-size-controls {
+  max-height: 50px;
+  margin-bottom: 6px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.font-size-controls button {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  padding: 5px 7px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font: 500 11px/1 Arial, sans-serif;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.font-size-controls button:hover,
+.font-size-controls button:focus-visible {
+  background: rgba(184, 140, 255, 0.32);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+#quote-wrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: clamp(28px, 8vw, 120px);
+  text-align: center;
+  pointer-events: none;
+}
+
+#quote {
+  max-width: min(1100px, 90vw);
+  color: var(--text-color);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 5vw, 6.5rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  text-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.24),
+    0 10px 34px rgba(0, 0, 0, 0.24);
+}
+
+#quote-source {
+  margin-top: 16px;
+  max-width: 80vw;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(0.8rem, 1.5vw, 1.1rem);
+  font-style: italic;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 620px) {
+  #clock-panel {
+    top: 10px;
+    right: 10px;
+    padding: 10px 12px;
+  }
+
+  #quote-wrap {
+    padding: 70px 22px 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-layer,
+  .bg-next {
+    transition: none;
+    transform: none;
+  }
+}

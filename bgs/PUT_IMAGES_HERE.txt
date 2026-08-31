@@ -1,0 +1,1 @@
+Add your high-resolution SFW background images here, then update configs/backgrounds.json.

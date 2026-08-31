@@ -1,0 +1,47 @@
+{
+  "_comment": "Text is randomly selected whenever the page is loaded or a new tab opens.",
+  "pageTitle": "\ud83c\udf0c",
+  "googleFonts": [
+    "Cormorant Garamond",
+    "Playfair Display",
+    "Libre Baskerville"
+  ],
+  "colors": [
+    "#ffffff",
+    "#ffd6e7",
+    "#ffd1a8",
+    "#fff0a6",
+    "#bff7d1",
+    "#bde7ff",
+    "#cfc7ff",
+    "#e6c1ff",
+    "#ffb8c8",
+    "#d7f5ff"
+  ],
+  "items": [
+    {
+      "text": "The quiet work still counts.",
+      "source": ""
+    },
+    {
+      "text": "Begin again, as many times as necessary.",
+      "source": ""
+    },
+    {
+      "text": "Attention is a form of devotion.",
+      "source": ""
+    },
+    {
+      "text": "Make the next hour useful.",
+      "source": ""
+    },
+    {
+      "text": "Small progress is still movement.",
+      "source": ""
+    },
+    {
+      "text": "Leave room for wonder.",
+      "source": ""
+    }
+  ]
+}

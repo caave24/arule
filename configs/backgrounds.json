@@ -1,0 +1,12 @@
+{
+  "_comment": "Add your SFW image files to /bgs and list their repo-relative paths here. Use high-resolution images.",
+  "changeEveryMs": 45000,
+  "transitionDurationMs": 1800,
+  "images": [
+    "./bgs/space-01.jpg",
+    "./bgs/nasa-01.jpg",
+    "./bgs/bear-cub-01.jpg",
+    "./bgs/calm-01.jpg",
+    "./bgs/focus-01.jpg"
+  ]
+}

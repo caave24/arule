@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A-RULE — a minimal rotating homepage." />
+  <title>🌌</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link id="google-fonts" rel="stylesheet" href="" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="background-root" aria-hidden="true">
+    <div class="bg-layer bg-base"></div>
+    <div class="bg-layer bg-next"></div>
+  </div>
+
+  <main>
+    <section id="clock-panel" aria-label="Current time">
+      <div class="font-size-controls" aria-label="Clock font size">
+        <button type="button" data-size="24" title="Small clock">24px</button>
+        <button type="button" data-size="32" title="Medium clock">32px</button>
+        <button type="button" data-size="64" title="Large clock">64px</button>
+      </div>
+      <time id="time"></time>
+      <time id="date"></time>
+    </section>
+
+    <section id="quote-wrap" aria-live="polite">
+      <div id="quote"></div>
+      <div id="quote-source"></div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
