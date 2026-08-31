@@ -182,7 +182,7 @@ main {
 #quote {
   max-width: min(1100px, 90vw);
   color: var(--text-color);
-  font-family: var(--quote-font), Georgia, "Times New Roman", serif;  
+  font-family: Georgia, "Times New Roman", serif;  
   font-size: clamp(2rem, 5vw, 6.5rem);
   font-weight: 500;
   line-height: 1.08;
@@ -197,7 +197,7 @@ main {
   margin-top: 16px;
   max-width: 80vw;
   color: rgba(255, 255, 255, 0.78);
-  font-family: var(--quote-font), Georgia, "Times New Roman", serif;  
+  font-family: Georgia, "Times New Roman", serif;  
   font-size: clamp(0.8rem, 1.5vw, 1.1rem);
   font-style: italic;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
