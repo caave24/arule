@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pathlib import Path
 import json
 import re
@@ -5,19 +7,38 @@ import re
 from PIL import Image, ImageOps
 
 
+# --------------------------------------------------
+# PROJECT PATHS
+# --------------------------------------------------
+
 ROOT = Path(__file__).resolve().parents[1]
 
 SOURCE_DIR = ROOT / "bgs" / "source"
 OUTPUT_DIR = ROOT / "bgs"
+
 CONFIG_PATH = ROOT / "configs" / "backgrounds.json"
 
 
-# Maximum size of either dimension.
-# Images retain their original aspect ratio.
+# --------------------------------------------------
+# OPTIMIZATION SETTINGS
+# --------------------------------------------------
+
+# Images larger than this are proportionally reduced.
+# The longest side is capped at this value.
 MAX_LONG_EDGE = 2560
 
-# WebP quality: good visual quality with significant file-size reduction.
+# Good balance between visual quality and file size.
 WEBP_QUALITY = 82
+
+# Pillow compression effort.
+# 0 = fastest / least compression
+# 6 = slowest / best compression
+WEBP_METHOD = 6
+
+
+# --------------------------------------------------
+# SUPPORTED SOURCE FORMATS
+# --------------------------------------------------
 
 VALID_EXTENSIONS = {
     ".jpg",
@@ -29,8 +50,27 @@ VALID_EXTENSIONS = {
 }
 
 
-def safe_name(path):
-    """Create a predictable web-safe filename."""
+# --------------------------------------------------
+# FILENAME NORMALIZATION
+# --------------------------------------------------
+
+def normalized_name(path):
+    """
+    Normalize a filename stem for matching.
+
+    Examples:
+
+        Space Photo.jpg
+        space-photo.webp
+
+        -> space-photo
+
+
+        bear_cub.png
+        bear-cub.webp
+
+        -> bear-cub
+    """
 
     name = path.stem.lower()
 
@@ -40,19 +80,76 @@ def safe_name(path):
         name,
     )
 
-    name = name.strip("-")
+    return name.strip("-")
 
-    return name or "background"
 
+def output_name(source):
+    """
+    Generate the optimized WebP filename.
+
+    The optimized filename uses the normalized source name.
+
+    Example:
+
+        26447766349_22c8e2b0bb_o.jpg
+
+        becomes:
+
+        26447766349-22c8e2b0bb-o.webp
+    """
+
+    return (
+        normalized_name(source)
+        + ".webp"
+    )
+
+
+# --------------------------------------------------
+# FILE SIZE FORMATTING
+# --------------------------------------------------
+
+def format_size(size):
+
+    units = [
+        "B",
+        "KB",
+        "MB",
+        "GB",
+    ]
+
+    value = float(size)
+
+    for unit in units:
+
+        if value < 1024:
+
+            return (
+                f"{value:.1f} "
+                f"{unit}"
+            )
+
+        value /= 1024
+
+    return (
+        f"{value:.1f} TB"
+    )
+
+
+# --------------------------------------------------
+# IMAGE RESIZING
+# --------------------------------------------------
 
 def resize_preserving_aspect_ratio(image):
     """
-    Reduce an image only when its longest edge exceeds MAX_LONG_EDGE.
+    Resize only when the image's longest edge is larger
+    than MAX_LONG_EDGE.
 
-    This never:
-    - stretches the image
-    - crops the image
-    - changes its aspect ratio
+    This function never:
+
+    - stretches
+    - distorts
+    - crops
+    - changes aspect ratio
     - enlarges smaller images
     """
 
@@ -63,8 +160,9 @@ def resize_preserving_aspect_ratio(image):
         height,
     )
 
-    # Leave smaller images completely alone.
+    # Do not enlarge smaller images.
     if longest_edge <= MAX_LONG_EDGE:
+
         return image
 
     scale = (
@@ -89,88 +187,227 @@ def resize_preserving_aspect_ratio(image):
     )
 
 
+# --------------------------------------------------
+# IMAGE PREPARATION
+# --------------------------------------------------
+
 def prepare_image(image):
     """
-    Normalize the image before optimization.
+    Correct orientation and prepare the image for WebP.
     """
 
-    # Correct camera/EXIF rotation.
+    # Correct EXIF/camera rotation.
     image = ImageOps.exif_transpose(
         image
     )
 
-    # Convert everything to RGB for photographic WebP output.
+    # Preserve transparency if present.
     #
-    # Transparent images are composited onto black.
-    if (
-        image.mode in ("RGBA", "LA")
-        or (
-            image.mode == "P"
-            and "transparency" in image.info
-        )
+    # WebP supports alpha, so there is no reason to
+    # flatten transparent PNGs onto black.
+    if image.mode in (
+        "RGBA",
+        "LA",
     ):
 
-        rgba = image.convert(
+        return image.convert(
             "RGBA"
         )
 
-        background = Image.new(
-            "RGB",
-            image.size,
-            (0, 0, 0),
+    # Palette images with transparency.
+    if (
+        image.mode == "P"
+        and "transparency" in image.info
+    ):
+
+        return image.convert(
+            "RGBA"
         )
 
-        background.paste(
-            rgba,
-            mask=rgba.getchannel("A"),
-        )
-
-        return background
-
+    # Standard photographic backgrounds.
     return image.convert(
         "RGB"
     )
 
 
-def optimize_image(source):
+# --------------------------------------------------
+# OUTPUT VERIFICATION
+# --------------------------------------------------
 
-    output_name = (
-        f"{safe_name(source)}.webp"
+def verify_image(path):
+    """
+    Verify that the generated image:
+
+    - exists
+    - is not empty
+    - can be opened by Pillow
+    """
+
+    if not path.exists():
+
+        print(
+            f"Verification failed: "
+            f"{path.name} does not exist."
+        )
+
+        return False
+
+    if path.stat().st_size <= 0:
+
+        print(
+            f"Verification failed: "
+            f"{path.name} is empty."
+        )
+
+        return False
+
+    try:
+
+        with Image.open(path) as image:
+
+            image.verify()
+
+        return True
+
+    except Exception as error:
+
+        print(
+            f"Verification failed for "
+            f"{path.name}: {error}"
+        )
+
+        return False
+
+
+# --------------------------------------------------
+# MATCHING OUTPUT CHECK
+# --------------------------------------------------
+
+def has_matching_output(source):
+    """
+    Check whether bgs/ contains a verified file with
+    the same normalized name as the source image.
+
+    File extension does not matter.
+
+    Example:
+
+        source:
+        image_name.jpg
+
+        output:
+        image-name.webp
+
+        -> MATCH
+    """
+
+    source_name = normalized_name(
+        source
     )
 
-    output = (
+    for output in OUTPUT_DIR.iterdir():
+
+        # Ignore directories, including bgs/source.
+        if not output.is_file():
+
+            continue
+
+        # Ignore source files and unrelated formats.
+        if output.suffix.lower() != ".webp":
+
+            continue
+
+        output_name_normalized = (
+            normalized_name(output)
+        )
+
+        if (
+            output_name_normalized
+            == source_name
+        ):
+
+            if verify_image(output):
+
+                return True
+
+    return False
+
+
+# --------------------------------------------------
+# OPTIMIZATION
+# --------------------------------------------------
+
+def optimize_image(source):
+
+    destination = (
         OUTPUT_DIR
-        / output_name
+        / output_name(source)
+    )
+
+    original_file_size = (
+        source.stat().st_size
     )
 
     with Image.open(source) as image:
 
-        # Fix orientation.
-        image = ImageOps.exif_transpose(
-            image
-        )
-
-        # Normalize format.
+        # Normalize orientation and mode.
         image = prepare_image(
             image
         )
 
-        original_size = image.size
-
-        # Resize proportionally.
-        image = resize_preserving_aspect_ratio(
-            image
+        original_dimensions = (
+            image.size
         )
 
-        optimized_size = image.size
+        # Proportional resize.
+        image = (
+            resize_preserving_aspect_ratio(
+                image
+            )
+        )
 
-        # Re-encode as optimized WebP.
+        optimized_dimensions = (
+            image.size
+        )
+
+        # Save optimized WebP.
         image.save(
-            output,
+            destination,
             "WEBP",
             quality=WEBP_QUALITY,
-            method=6,
+            method=WEBP_METHOD,
         )
+
+    # Verify generated output before proceeding.
+    if not verify_image(destination):
+
+        raise RuntimeError(
+            f"Generated image failed verification: "
+            f"{destination.name}"
+        )
+
+    optimized_file_size = (
+        destination.stat().st_size
+    )
+
+    saved_bytes = (
+        original_file_size
+        - optimized_file_size
+    )
+
+    if original_file_size > 0:
+
+        saved_percent = (
+            saved_bytes
+            / original_file_size
+            * 100
+        )
+
+    else:
+
+        saved_percent = 0
+
+    print()
 
     print(
         f"Optimized: "
@@ -178,13 +415,148 @@ def optimize_image(source):
     )
 
     print(
-        f"  {original_size[0]}×{original_size[1]}"
+        f"Dimensions: "
+        f"{original_dimensions[0]}×"
+        f"{original_dimensions[1]}"
         f" → "
-        f"{optimized_size[0]}×{optimized_size[1]}"
+        f"{optimized_dimensions[0]}×"
+        f"{optimized_dimensions[1]}"
     )
 
-    return output
+    print(
+        f"Size: "
+        f"{format_size(original_file_size)}"
+        f" → "
+        f"{format_size(optimized_file_size)}"
+    )
 
+    print(
+        f"Saved: "
+        f"{format_size(abs(saved_bytes))}"
+        f" "
+        f"({saved_percent:.1f}%)"
+    )
+
+    print(
+        f"Output: "
+        f"{destination.relative_to(ROOT)}"
+    )
+
+    return destination
+
+
+# --------------------------------------------------
+# SOURCE CLEANUP
+# --------------------------------------------------
+
+def delete_source_if_matching(source):
+    """
+    Delete the original source image only when a verified
+    WebP with the same normalized filename exists in bgs/.
+    """
+
+    if has_matching_output(source):
+
+        source.unlink()
+
+        print(
+            f"Deleted source: "
+            f"{source.relative_to(ROOT)}"
+        )
+
+        return True
+
+    print(
+        f"Keeping source: "
+        f"{source.relative_to(ROOT)}"
+    )
+
+    print(
+        "Reason: no verified matching "
+        "optimized WebP was found."
+    )
+
+    return False
+
+
+# --------------------------------------------------
+# BACKGROUND CONFIG GENERATION
+# --------------------------------------------------
+
+def generate_background_config():
+    """
+    Regenerate configs/backgrounds.json using all
+    optimized WebP files directly inside bgs/.
+    """
+
+    images = sorted(
+
+        file
+
+        for file in OUTPUT_DIR.iterdir()
+
+        if (
+            file.is_file()
+            and file.suffix.lower()
+            == ".webp"
+        )
+
+    )
+
+    config = {
+
+        "_comment": (
+            "AUTO-GENERATED by "
+            "scripts/optimize_backgrounds.py. "
+            "Add originals to bgs/source/."
+        ),
+
+        "changeEveryMs": 45000,
+
+        "transitionDurationMs": 1800,
+
+        "images": [
+
+            f"./bgs/{image.name}"
+
+            for image in images
+
+        ],
+
+    }
+
+    CONFIG_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    CONFIG_PATH.write_text(
+
+        json.dumps(
+            config,
+            indent=2,
+        )
+        + "\n",
+
+        encoding="utf-8",
+    )
+
+    print()
+
+    print(
+        f"Updated: "
+        f"{CONFIG_PATH.relative_to(ROOT)}"
+    )
+
+    print(
+        f"Background count: "
+        f"{len(images)}"
+    )
+
+
+# --------------------------------------------------
+# MAIN
+# --------------------------------------------------
 
 def main():
 
@@ -199,79 +571,85 @@ def main():
     )
 
     source_files = sorted(
+
         file
-        for file in SOURCE_DIR.rglob("*")
+
+        for file in SOURCE_DIR.iterdir()
+
         if (
             file.is_file()
             and file.suffix.lower()
             in VALID_EXTENSIONS
         )
+
     )
 
-    optimized_files = []
+    if not source_files:
+
+        print(
+            "No source images found in "
+            "bgs/source/."
+        )
+
+        # Still regenerate the config from existing WebPs.
+        generate_background_config()
+
+        return
+
+    print(
+        f"Found "
+        f"{len(source_files)} "
+        f"source image(s)."
+    )
+
+    successful = 0
 
     for source in source_files:
 
         try:
 
-            optimized = optimize_image(
+            optimize_image(
                 source
             )
 
-            optimized_files.append(
-                optimized
-            )
+            if delete_source_if_matching(
+                source
+            ):
+
+                successful += 1
 
         except Exception as error:
+
+            print()
 
             print(
                 f"WARNING: "
                 f"Could not process "
-                f"{source}: "
-                f"{error}"
+                f"{source.name}"
             )
 
-    # Automatically regenerate the background list.
-    config = {
+            print(
+                f"Error: {error}"
+            )
 
-        "_comment": (
-            "AUTO-GENERATED. "
-            "Add original images to "
-            "bgs/source/ and push to main."
-        ),
+            print(
+                "The original source file "
+                "was kept."
+            )
 
-        "changeEveryMs": 45000,
+    # Rebuild the JSON config from all optimized WebPs.
+    generate_background_config()
 
-        "transitionDurationMs": 1800,
+    print()
 
-        "images": [
-
-            f"./bgs/{image.name}"
-
-            for image in optimized_files
-
-        ],
-
-    }
-
-    CONFIG_PATH.write_text(
-        json.dumps(
-            config,
-            indent=2,
-        )
-        + "\\n",
-
-        encoding="utf-8",
+    print(
+        "Optimization complete."
     )
 
     print(
-        f"Updated "
-        f"{CONFIG_PATH.relative_to(ROOT)}"
-    )
-
-    print(
-        f"{len(optimized_files)} "
-        f"background(s) ready."
+        f"Successfully processed: "
+        f"{successful}/"
+        f"{len(source_files)}"
     )
 
 
