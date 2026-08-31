@@ -13,7 +13,7 @@ from PIL import Image, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
 
-SOURCE_DIR = ROOT / "bgs" / "source"
+SOURCE_DIR = ROOT / "source"
 OUTPUT_DIR = ROOT / "bgs"
 
 CONFIG_PATH = ROOT / "configs" / "backgrounds.json"
